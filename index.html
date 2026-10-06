@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Site</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  img {
+    max-width: 80vw;
+    max-height: 80vh;
+  }
+</style>
+</head>
+<body>
+
+<img src="virus.png" alt="virus">
+
+<!-- Firebase SDK (совместимая версия) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAU4opyTFmHt7LsSC2ue8y4S4T_rtWYBOo",
+    authDomain: "pixelbattle-a085d.firebaseapp.com",
+    databaseURL: "https://pixelbattle-a085d-default-rtdb.firebaseio.com",
+    projectId: "pixelbattle-a085d",
+    storageBucket: "pixelbattle-a085d.firebasestorage.app",
+    messagingSenderId: "704091500505",
+    appId: "1:704091500505:web:bbf90758b48b056cad73c8"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const counterRef = db.ref('visitors');
+
+  // ===== Работа с cookie =====
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  function setCookie(name, value, days) {
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = name + '=' + encodeURIComponent(value) +
+      '; expires=' + d.toUTCString() + '; path=/; SameSite=Lax';
+  }
+
+  const VISIT_COOKIE = 'user_visited';
+
+  // Если пользователь ещё не заходил — увеличиваем счётчик через транзакцию
+  if (!getCookie(VISIT_COOKIE)) {
+    counterRef.transaction(current => (current || 0) + 1)
+      .then(() => {
+        setCookie(VISIT_COOKIE, '1', 365); // на год
+      })
+      .catch(err => console.error('Ошибка транзакции:', err));
+  }
+</script>
+
+</body>
+</html>
