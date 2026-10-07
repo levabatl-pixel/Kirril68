@@ -6,21 +6,94 @@
 <style>
   html, body {
     margin: 0;
-    height: 100%;
+    min-height: 100%;
     background: #111;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 14px;
+    font-family: monospace;
+    padding: 20px;
+    box-sizing: border-box;
   }
   img {
-    max-width: 80vw;
-    max-height: 80vh;
+    max-width: 70vw;
+    max-height: 60vh;
+  }
+  #info {
+    color: #ff2b2b;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.5;
+    text-shadow: 0 0 4px rgba(255,0,0,0.6);
+  }
+  #info .big {
+    font-size: 18px;
+    font-weight: bold;
+  }
+  #form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 420px;
+  }
+  #nickInput {
+    width: 100%;
+    padding: 8px 10px;
+    background: #1a1a1a;
+    border: 1px solid #ff2b2b;
+    color: #ff2b2b;
+    font-family: monospace;
+    font-size: 13px;
+    border-radius: 4px;
+    box-sizing: border-box;
+    outline: none;
+  }
+  #nickInput::placeholder {
+    color: #ff2b2b;
+    opacity: 0.75;
+  }
+  #nickInput:focus {
+    box-shadow: 0 0 6px rgba(255,0,0,0.7);
+  }
+  #sendBtn {
+    padding: 8px 20px;
+    background: #111;
+    border: 1px solid #ff2b2b;
+    color: #ff2b2b;
+    font-family: monospace;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    text-shadow: 0 0 4px rgba(255,0,0,0.6);
+  }
+  #sendBtn:hover {
+    background: #ff2b2b;
+    color: #111;
+  }
+  #sendBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 </style>
 </head>
 <body>
 
 <img src="virus.png" alt="virus">
+
+<div id="info">
+  <div class="big">Заражено: <span id="count">...</span></div>
+  <div>Вирус создал @batlukov</div>
+</div>
+
+<div id="form" style="display:none;">
+  <input id="nickInput" type="text" maxlength="30"
+         placeholder="введите свой ник в итд если хотите виднется в списке заражённых">
+  <button id="sendBtn" type="button">ввести</button>
+</div>
 
 <!-- Firebase SDK (совместимая версия) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -40,6 +113,12 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const counterRef = db.ref('visitors');
+  const nicksRef = db.ref('nicks');
+
+  const countEl = document.getElementById('count');
+  const formEl = document.getElementById('form');
+  const nickInput = document.getElementById('nickInput');
+  const sendBtn = document.getElementById('sendBtn');
 
   // ===== Работа с cookie =====
   function getCookie(name) {
@@ -55,14 +134,46 @@
   }
 
   const VISIT_COOKIE = 'user_visited';
+  const alreadyVisited = !!getCookie(VISIT_COOKIE);
 
-  // Если пользователь ещё не заходил — увеличиваем счётчик через транзакцию
-  if (!getCookie(VISIT_COOKIE)) {
+  // ===== Показываем счётчик в реальном времени =====
+  counterRef.on('value', snap => {
+    countEl.textContent = snap.val() || 0;
+  });
+
+  // ===== Логика первого визита =====
+  if (!alreadyVisited) {
     counterRef.transaction(current => (current || 0) + 1)
       .then(() => {
-        setCookie(VISIT_COOKIE, '1', 365); // на год
+        setCookie(VISIT_COOKIE, '1', 365); // запоминаем на год
       })
       .catch(err => console.error('Ошибка транзакции:', err));
+
+    // Показываем форму только новым посетителям
+    formEl.style.display = 'flex';
+
+    sendBtn.addEventListener('click', () => {
+      const nick = nickInput.value.trim();
+      if (!nick) return;
+
+      sendBtn.disabled = true;
+      nicksRef.push(nick)
+        .then(() => {
+          nickInput.value = '';
+          sendBtn.textContent = 'введено ✓';
+          setTimeout(() => {
+            formEl.style.display = 'none';
+          }, 800);
+        })
+        .catch(err => {
+          console.error('Ошибка записи ника:', err);
+          sendBtn.disabled = false;
+        });
+    });
+
+    nickInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
   }
 </script>
 
